@@ -1,0 +1,221 @@
+General Information
+
+16-bit single core CPU
+
+641536 x 16-bit memory
+
+Registers (25)
+ - General purpose registers (0-15)
+ - PC register (S0)
+ - Return register (S1)
+ - HI (S2)
+ - LOW (S3)
+ - CLOCK (S4)
+ - STATUS (S5)
+ - IN (S6)
+ - OUT (S7)
+ - Instruction
+
+STATUS
+0 - Carry Bit
+1 - Arithmetic Exception
+2 - IN Waiting
+3 - OUT Waiting
+4-15 - Universe number
+
+All registers are set to 0 on start
+
+executes sequentially each cycle: 
+    Fetch Instruction
+    Execture Instruction
+    Increment PC if unset
+
+Instruction Formats
+
+#1 AAAA BBBB CCCC DDDD
+A - Opcode
+B - r1 or constant
+C - r2 or constant
+D - r3 or constant
+
+#2 AAAA AAAA BBBB CCCC
+A - Opcode
+B - r1 or constant
+C - r2 or constant
+
+#3 AAAA AAAA AAAA BBBB
+A - Opcode
+B - r1 or constant
+C - r2 or constant
+
+Instructions
+
+ADD r1 r2 r3
+0001 _ _ _
+Sets r1 to the sum of r2 and r3
+# Sets carry bit in STATUS
+
+MUL r1 r2 r3
+0010 _ _ _
+Sets HI and LOW to the signed product of r2 and r3, then sets r1 to the value of LOW
+
+MULU r1 r2 r3
+0011 _ _ _
+Sets HI and LOW to the unsigned product of r2 and r3, then sets r1 to the value of LOW
+
+DIV r1 r2 r3
+0100 _ _ _
+Sets HI to signed r2 / r3 and LOW to the remainder, then sets r1 to HI
+# Remainder sign depends only on r2
+# Divide by 0 sets Arithmetic Error in Status
+
+DIVU r1 r2 r3
+0101 _ _ _
+Sets HI to unsigned r2 / r3 and LOW to the remainder, then sets r1 to HI
+# Divide by 0 sets Arithmetic Error in Status
+
+SETL r1 value
+0110 _ _ _
+Sets first 8-bits of r1 to value
+
+SETR r1 value
+0111 _ _ _
+Sets last 8-bits of r1 to value
+
+SET r1 value
+1000 _ _ _
+Sets r1 to the sign-extended 8-bit value
+
+SETU r1 value
+1001 _ _ _
+Sets r1 to the 0-extended 8-bit value
+
+JMPC value
+1010 _ _ _
+Sets PC to the signed sum of PC and value
+# First sets Return Register to PC + 1
+
+AND r1 r2 r3
+1011 _ _ _
+Sets r1 to the AND of r2 and r3
+
+OR r1 r2 r3
+1100 _ _ _
+Sets r1 to the OR of r2 and r3
+
+XOR r1 r2 r3
+1101 _ _ _
+Sets r1 to the XOR of r2 and r3
+
+ADDI r1 value
+1110 _ _ _
+Sets r1 to the signed sum of r1 and value
+# Sets carry bit in Status
+
+ADDIH r1 value
+1111 _ _ _
+Sets r1 to the signed sum of r1 and 8-bit left shifted value
+# Sets carry bit in Status
+
+
+MOVS r1 r2
+0000 0001 _ 0_
+Copies the value of special register r2 into general register r1
+
+MOV r1 r2
+0000 0010 _ _
+Copies the value of r2 into r1
+
+STAT r1 value
+0000 0011 _ _
+Sets r1 to 1 if the specified status bit is set, otherwise r1 is set to 0
+
+LOAD r1 r2
+0000 0100 _ _
+Loads the value from memory at the address of r2 and stores it in r1
+
+STORE r1 r2
+0000 0101 _ _
+Stores the value of r1 to the memory address at r2
+
+JMPE r1 r2
+0000 0110 _ _
+Sets PC to r1 if r2 is zero else NOP
+# First sets Return Register to PC + 1
+
+JMPNE r1 r2
+0000 0111 _ _
+Sets PC to r1 if r2 is not zero else NOP
+# First sets Return Register to PC + 1
+
+JMPG r1 r2
+0000 1000 _ _
+Sets PC to r1 if r2 is greater than zero else NOP
+# First sets Return Register to PC + 1
+
+JMPGE r1 r2
+0000 1001 _ _
+Sets PC to r1 if r2 is greater than or equal to zero else NOP
+# First sets Return Register to PC + 1
+
+SFTLC r1 value
+0000 1010 _ _
+Shifts r1 value bits to the left (fill 0)
+
+SFTRC r1 value
+0000 1011 _ _
+Shifts r1 value bits to the right (fill0)
+
+SFTRAC r1 value
+0000 1100 _ _
+Shifts r1 value bits to the right (fill sign bit)
+
+SFTL r1 r2
+0000 1101 _ _
+Shifts r1 r2 bits to the left (fill 0)
+
+SFTR r1 r2
+0000 1110 _ _
+Shifts r1 r2 bits to the right (fill0)
+
+SFTRA r1 r2
+0000 1111 _ _
+Shifts r1 r2 bits to the right (fill sign bit)
+
+
+RET
+0000 0000 0000 _
+Sets PC to Return Register
+
+JMP r1
+0000 0000 0001 _
+Sets PC to r1
+# First sets Return Register to PC + 1
+
+OUT r1
+0000 0000 0010 _
+Sets OUT to the value of r1
+
+NOP
+0000 0000 0011 _
+# Do nothing
+
+KILL
+0000 0000 0100 _
+# Ends CPU
+
+FORK
+0000 0000 0101 _
+# Spawns A duplicate CPU with +1 Universe Number
+
+INV r1
+0000 0000 0101 _
+Sets r1 to its twos-complement
+
+COMP r1
+0000 0000 0101 _
+Sets r1 to its one-complement
+
+CEIL r1
+0000 0000 0111 _
+Sets r1 to 0 if r1 < 0

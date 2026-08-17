@@ -1,0 +1,20 @@
+All CPU Commands exist one for one
+
+The Assembler Assumes 3 Data Types:
+    Signed Integer
+    Unsigned Integer
+    Boolean
+
+Boolean is false when value is 0, else true
+
+Additional Commands
+
+SUB r1 r2 r3
+Sets r1 to r2 - r3
+$ INV r3
+$ ADD r1 r2 r3
+
+GR r1 r2 r3
+Sets r1 to boolean r2 > r3
+$ SUB r1 r2 r3
+$ CEIL r1
