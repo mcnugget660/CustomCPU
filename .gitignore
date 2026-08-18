@@ -1,5 +1,5 @@
 build/
-.vscode/g
+.vscode/
 *.o
 *.exe
 notes

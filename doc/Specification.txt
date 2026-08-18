@@ -21,14 +21,20 @@ STATUS
 1 - Arithmetic Exception
 2 - IN Waiting
 3 - OUT Waiting
-4-15 - Universe number
+4 - FORK Waiting
+5 - KILL
+7
+8
+8-15 - Universe number
 
 All registers are set to 0 on start
 
-executes sequentially each cycle: 
+Cycle Stages:
+    Set Input
     Fetch Instruction
-    Execture Instruction
-    Increment PC if unset
+    Execute Instruction (Increment PC if unset)
+
+All Processors are run sequentially for every stage in order of creation
 
 Instruction Formats
 
@@ -119,8 +125,9 @@ Sets r1 to the signed sum of r1 and 8-bit left shifted value
 
 
 MOVS r1 r2
-0000 0001 _ 0_
+0000 0001 _ X_
 Copies the value of special register r2 into general register r1
+# First bit of sr is ignored
 
 MOV r1 r2
 0000 0010 _ _
@@ -173,14 +180,17 @@ Shifts r1 value bits to the right (fill sign bit)
 SFTL r1 r2
 0000 1101 _ _
 Shifts r1 r2 bits to the left (fill 0)
+# Sets Arithmetic Exception bit in Status if r2 is not within [0, 15]
 
 SFTR r1 r2
 0000 1110 _ _
 Shifts r1 r2 bits to the right (fill0)
+# Sets Arithmetic Exception bit in Status if r2 is not within [0, 15]
 
 SFTRA r1 r2
 0000 1111 _ _
 Shifts r1 r2 bits to the right (fill sign bit)
+# Sets Arithmetic Exception bit in Status if r2 is not within [0, 15]
 
 
 RET
@@ -202,17 +212,18 @@ NOP
 
 KILL
 0000 0000 0100 _
-# Ends CPU
+Sets KILL bit of STATUS
 
 FORK
 0000 0000 0101 _
-# Spawns A duplicate CPU with +1 Universe Number
+Sets FORK bit of STATUS -> Spawns A duplicate CPU with +1 Universe Number
+# FORK bit will reset next cycle
 
-INV r1
+NEG r1
 0000 0000 0101 _
-Sets r1 to its twos-complement
+Negates r1
 
-COMP r1
+NOT r1
 0000 0000 0101 _
 Sets r1 to its one-complement
 

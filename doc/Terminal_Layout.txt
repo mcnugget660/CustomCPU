@@ -1,0 +1,55 @@
+Basic
+
+. . . . . . . . . . . . . . CustomCPU . . . . . . . . . . . . . .
+| (Output)
+|
+|
+|
+|
+|
+| sdlfdkl kjdsjkfkj
+|
+|
+|
+|
+|
+| sdfkjkj jkdfjkjk
+|
+|
+|
+|
+|
+|
+|
+Processors : 1   Cycles/Second : 73000  InputQueue : 3,000,000 hw
+Kill Restart StepThrough
+... (Input)
+
+
+
+StepThrough Mode
+
+. . . . . . . . . . . . . . CustomCPU . . . . . . . . . . . . . . .
+| Registers                                             INFO
+| G0 0000 0000 0000 0000    G08 0000 0000 0000 0000     PC : 1230
+| G1 0000 0000 0000 0000    G09 0000 0000 0000 0000     CLK : 8999
+| G2 0000 0000 0000 0000    G10 0000 0000 0000 0000     ERROR : YES
+| G3 0000 0000 0000 0000    G11 0000 0000 0000 0000
+| G4 0000 0000 0000 0000    G12 0000 0000 0000 0000
+| G5 0000 0000 0000 0000    G13 0000 0000 0000 0000
+| G6 0000 0000 0000 0000    G14 0000 0000 0000 0000
+| G7 0000 0000 0000 0000    G15 0000 0000 0000 0000
+|
+| PC  0000 0000 0000 0000  CLOCK  0000 0000 0000 0000
+| RET 0000 0000 0000 0000  STATUS 0000 0000 0000 0000
+| HI  0000 0000 0000 0000  IN     0000 0000 0000 0000
+| LOW 0000 0000 0000 0000  OUT    0000 0000 0000 0000
+|
+| - - - - - - Instruction 0000 0000 0000 0000 (RET) - - - - - - -
+| (Output)
+| 
+|
+|
+Processors : 1   Cycles/Second : 73000  InputQueue : 3,000,000 hw
+Kill Restart StepThrough <--- CPU(0) ---> Advance
+... (Input)
