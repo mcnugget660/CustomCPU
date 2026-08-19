@@ -4,6 +4,8 @@ General Information
 
 641536 x 16-bit memory
 
+For ease of use, a direct input-output system is built into the CPU itself
+
 Registers (25)
  - General purpose registers (0-15)
  - PC register (S0)

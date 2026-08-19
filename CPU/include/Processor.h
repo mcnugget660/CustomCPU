@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <array>
+#include <string>
 
 class Processor {
 public:
@@ -12,9 +13,9 @@ public:
 
     void execute();
 
-    bool setOut(uint16_t* value);
+    bool getOut(uint16_t* value);
 
-    void setIn(uint16_t value);
+    bool setIn(uint16_t value);
 
     bool shouldFork();
 
@@ -23,13 +24,16 @@ public:
     void setUniverse(uint8_t num);
 
     uint8_t getUniverse();
-private:
-    std::array<int16_t, 641536>* memory;
 
     // Registers
     int16_t gr[16] = {};
     uint16_t sr[8] = {};
     uint16_t instruction = 0;
+
+    static std::array<std::string, 40> instruction_codes;
+
+private:
+    std::array<int16_t, 641536>* memory;
 
     // Invisible values
     uint16_t nxt_PC = 0;

@@ -2,55 +2,29 @@
 
 #include <iostream>
 
+std::array<std::string, 40> Processor::instruction_codes = {
+    "NULL", "ADD", "MUL", "MULU", "DIV", "DIVU", "SETL", "SETR", "SET", "SETU",
+    "JMPC", "AND", "OR", "XOR", "ADDC", "ADDCH", "MOVS", "MOV", "STAT", "LOAD",
+    "STORE", "JMPE", "JMPNE", "JMPG", "JMPGE", "SFTLC", "SFTRC", "SFTRAC", "SFTL",
+    "SFTR", "SFTRA", "RET", "JMP", "OUT", "NOP", "KILL", "FORK", "NEG", "NOT", "CEIL"
+};
+
 std::array<void (Processor::*)(), 16> Processor::instruction_table1 = {
-        &Processor::ROUTE1,
-        &Processor::ADD,
-        &Processor::MUL,
-        &Processor::MULU,
-        &Processor::DIV,
-        &Processor::DIVU,
-        &Processor::SETL,
-        &Processor::SETR,
-        &Processor::SET,
-        &Processor::SETU,
-        &Processor::JMPC,
-        &Processor::AND,
-        &Processor::OR,
-        &Processor::XOR,
-        &Processor::ADDC,
-        &Processor::ADDCH
-    };
+    &Processor::ROUTE1, &Processor::ADD, &Processor::MUL, &Processor::MULU, &Processor::DIV,
+    &Processor::DIVU, &Processor::SETL, &Processor::SETR, &Processor::SET, &Processor::SETU,
+    &Processor::JMPC, &Processor::AND, &Processor::OR, &Processor::XOR, &Processor::ADDC, &Processor::ADDCH
+};
     
 std::array<void (Processor::*)(), 16> Processor::instruction_table2 = {
-        &Processor::ROUTE2,
-        &Processor::MOVS,
-        &Processor::MOV,
-        &Processor::STAT,
-        &Processor::LOAD,
-        &Processor::STORE,
-        &Processor::JMPE,
-        &Processor::JMPNE,
-        &Processor::JMPG,
-        &Processor::JMPGE,
-        &Processor::SFTLC,
-        &Processor::SFTRC,
-        &Processor::SFTRAC,
-        &Processor::SFTL,
-        &Processor::SFTR,
-        &Processor::SFTRA
-    };
+    &Processor::ROUTE2, &Processor::MOVS, &Processor::MOV, &Processor::STAT, &Processor::LOAD,
+    &Processor::STORE, &Processor::JMPE, &Processor::JMPNE, &Processor::JMPG, &Processor::JMPGE,
+    &Processor::SFTLC, &Processor::SFTRC, &Processor::SFTRAC,&Processor::SFTL, &Processor::SFTR, &Processor::SFTRA
+};
     
 std::array<void (Processor::*)(), 9> Processor::instruction_table3 = {
-        &Processor::RET,
-        &Processor::JMP,
-        &Processor::OUT,
-        &Processor::NOP,
-        &Processor::KILL,
-        &Processor::FORK,
-        &Processor::NEG,
-        &Processor::NOT,
-        &Processor::CEIL
-    };
+    &Processor::RET, &Processor::JMP, &Processor::OUT, &Processor::NOP, &Processor::KILL,
+    &Processor::FORK, &Processor::NEG, &Processor::NOT, &Processor::CEIL
+};
 
 
 #define setStatus(bit) STATUS |= (1 << bit)
@@ -138,16 +112,20 @@ void Processor::execute() {
 }
 
 
-bool Processor::setOut(uint16_t* value) {
+bool Processor::getOut(uint16_t* value) {
     if(STATUS ^ (1 << 3))
         return false;
+    setStatusTo(3, 0);
     *value = OUT_R;
     return true;
 }
 
-void Processor::setIn(uint16_t value) {
+bool Processor::setIn(uint16_t value) {
+    if(STATUS & (1 << 2))
+        return false;
     STATUS |= (1 << 2);
     IN_R = value;
+    return true;
 }
 
 bool Processor::shouldFork() {

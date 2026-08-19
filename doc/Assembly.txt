@@ -1,13 +1,92 @@
+Usage
+
+run Assembler.exe file flags
+
+Produces file.asm on success
+Invalid directives will produce errors
+
+optional flags
+-o address
+Overrides program location (default 0)
+-s
+Disallows Assembly-only commands
+
+
 All CPU Commands exist one for one
 
-The Assembler Assumes 3 Data Types:
-    Signed Integer
-    Unsigned Integer
-    Boolean
 
-Boolean is false when value is 0, else true
+Directives
+
+#define Label X
+Replaces all occurances (seen iteratively in character order) of Label with X before interpreting
+Labels are applied to all lines below definition
+redefining a Label is acceptable
+No Label may start with : b, B, h, H
+
+#undef Label
+Removes the Label directive
+
+#x
+Replaced with the machine code address of the xth assembly line (this includes directives)
+
+#ENDP
+The address AFTER the final machine code Instruction
+
+#data -----
+Places data in same relative position
+Decimal is not allowed and data is padded to 16-bit blocks
+
+## Comment
+ALL characters past ## are ignored. i.e. ######## works 
+
+The following Labels are included by default 
+rx x [0, 15]
+Rx x [0, 15]
+sx x [0, 7]
+Sx x [0, 7]
+grx x [0, 15]
+GRx x [0, 15]
+srx x [0, 7]
+SRx x [0, 7]
+
+Constants
+
+Integers can be represented in the following ways
+
+Decimal (eg 43 or -1) : must fit within halfword
+Binary (eg b01 or B10) : Big Endian Ordering, obmitted digits are 0 (leftwards), underscores are ignored
+Hexadecimal (eg hA or H4B) : Same above
+
+Booleans -> true, TRUE, false, FALSE
+
+Command Conventions
+
+gr0 -> memory address
+gr1 -> store/load from memory + temp (ignore completly unless very careful)
 
 Additional Commands
+
+SETM addr hw
+Sets memory at addr to the full halfword
+$ SETL gr1 h
+$ SETR gr1 w
+$ SETL gr0 ad
+$ SETR gr0 dr
+$ STORE gr1 gr0
+May use SET or SETU if value is small enough
+
+
+LOAD addr r1
+Loads memory at addr into r1
+$ SETL gr0 ad
+$ SETR gr0 dr
+$ LOAD r1 gr0
+
+STORE addr r1
+Stores value of r1 into memory at addr
+$ SETL gr0 ad
+$ SETR gr0 dr
+$ STORE r1 gr0
 
 SUB r1 r2 r3
 Sets r1 to r2 - r3
@@ -18,3 +97,13 @@ GR r1 r2 r3
 Sets r1 to boolean r2 > r3
 $ SUB r1 r2 r3
 $ CEIL r1
+
+JMPL
+Sets PC to r1 if r2 is less than zero else NOP
+# First sets Return Register to PC + 1
+$
+
+JMPLE
+Sets PC to r1 if r2 is less than or equal to zero else NOP
+# First sets Return Register to PC + 1
+$ CEIL r2
