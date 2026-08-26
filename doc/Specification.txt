@@ -23,11 +23,11 @@ STATUS
 1 - Arithmetic Exception
 2 - IN Waiting
 3 - OUT Waiting
-4 - FORK Waiting
+4 - 
 5 - KILL
 7
 8
-8-15 - Universe number
+8-15 - ???
 
 All registers are set to 0 on start
 
@@ -36,7 +36,6 @@ Cycle Stages:
     Fetch Instruction
     Execute Instruction (Increment PC if unset)
 
-All Processors are run sequentially for every stage in order of creation
 
 Instruction Formats
 
@@ -216,17 +215,12 @@ KILL
 0000 0000 0100 _
 Sets KILL bit of STATUS
 
-FORK
-0000 0000 0101 _
-Sets FORK bit of STATUS -> Spawns A duplicate CPU with +1 Universe Number
-# FORK bit will reset next cycle
-
 NEG r1
 0000 0000 0101 _
 Negates r1
 
 NOT r1
-0000 0000 0101 _
+0000 0000 0110 _
 Sets r1 to its one-complement
 
 CEIL r1

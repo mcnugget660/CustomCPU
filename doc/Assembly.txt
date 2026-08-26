@@ -5,11 +5,16 @@ run Assembler.exe file flags
 Produces file.asm on success
 Invalid directives will produce errors
 
+flags are processed in order, can repeat arbitrarily
+
 optional flags
 -o address
 Overrides program location (default 0)
 -s
 Disallows Assembly-only commands
+-I filename
+includes directives from file
+no effect on program offset or relative addressing
 
 
 All CPU Commands exist one for one
@@ -18,28 +23,36 @@ All CPU Commands exist one for one
 Directives
 
 #define Label X
-Replaces all occurances (seen iteratively in character order) of Label with X before interpreting
+Replaces all occurances (seen as a whole word) of Label with X before interpreting
 Labels are applied to all lines below definition
 redefining a Label is acceptable
 No Label may start with : b, B, h, H
+No spaces
+
+#define Label
+x1
+x2
+#endif
+Defines a multiline Label
+only copies the lines in between #define and #endif
+contained directives are not copied but are processed normally
+No second argument -> will error
+**Implicitly the label includes a newline character at the end, meaning a statement
+with space seperated labels would compile. HOWEVER, labels added in this fashion after
+a regular instruction or directive will cause an error.
 
 #undef Label
 Removes the Label directive
 
-#x
-Replaced with the machine code address of the xth assembly line (this includes directives)
-
-#ENDP
-The address AFTER the final machine code Instruction
-
 #data -----
 Places data in same relative position
-Decimal is not allowed and data is padded to 16-bit blocks
+data is padded to 16-bit blocks
+dicimals not allowed (you will calculate binary representation anyways)
 
 ## Comment
 ALL characters past ## are ignored. i.e. ######## works 
 
-The following Labels are included by default 
+The following effective Labels are included by default (can not be removed or replaced)
 rx x [0, 15]
 Rx x [0, 15]
 sx x [0, 7]
@@ -49,11 +62,17 @@ GRx x [0, 15]
 srx x [0, 7]
 SRx x [0, 7]
 
+#x
+Replaced with the machine code address of the xth assembly line (this includes directives)
+
+#ENDP
+The address AFTER the final machine code Instruction
+
 Constants
 
 Integers can be represented in the following ways
 
-Decimal (eg 43 or -1) : must fit within halfword
+Decimal (eg 43 or -1) : must fit within halfword, positive integers are treated as unsigned
 Binary (eg b01 or B10) : Big Endian Ordering, obmitted digits are 0 (leftwards), underscores are ignored
 Hexadecimal (eg hA or H4B) : Same above
 

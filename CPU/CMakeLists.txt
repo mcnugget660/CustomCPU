@@ -4,7 +4,6 @@ project(CPU LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../..)
 
 include(FetchContent)
  
@@ -15,7 +14,7 @@ FetchContent_Declare(ftxui
  
 FetchContent_MakeAvailable(ftxui)
 
-add_executable(CPU src/main.cpp src/Processor.cpp)
+add_executable(CPU src/main.cpp src/Processor.cpp src/Menu.cpp)
 
 target_include_directories(CPU PRIVATE include)
 

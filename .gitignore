@@ -3,5 +3,4 @@ build/
 *.o
 *.exe
 notes
-output
-memory.txt
+*.txt
