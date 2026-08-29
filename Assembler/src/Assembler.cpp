@@ -9,14 +9,13 @@ using namespace std;
 
 #define vb vector<bool>
 map<string, Instruction> Assembler::insts = {
-    // Machine Instructions
     {"ADD", {1<<8, vb({true, true, true})}}, 
     {"MUL", {2<<8, vb({true, true, true})}}, 
     {"MULU", {3<<8, vb({true, true, true})}},
     {"DIV", {4<<8, vb({true, true, true})}}, 
     {"DIVU", {5<<8, vb({true, true, true})}}, 
-    {"SETL", {6<<8, vb({true})}},
-    {"SETR", {7<<8, vb({true})}}, 
+    {"SETLU", {6<<8, vb({true})}},
+    {"SETRU", {7<<8, vb({true})}}, 
     {"SET", {8<<8, vb({true})}}, 
     {"SETU", {9<<8, vb({true})}},
     {"JMPC", {10<<8, vb({})}},
@@ -24,7 +23,7 @@ map<string, Instruction> Assembler::insts = {
     {"OR", {12<<8, vb({true, true, true})}},
     {"XOR", {13<<8, vb({true, true, true})}}, 
     {"ADDI", {14<<8, vb({true})}}, 
-    {"ADDIH", {15<<8, vb({true})}},
+    {"ADDIU", {15<<8, vb({true})}},
     {"MOVS", {1<<4, vb({true, false})}}, 
     {"MOV", {2<<4, vb({true, true,})}}, 
     {"STAT", {3<<4, vb({true})}},
@@ -45,9 +44,16 @@ map<string, Instruction> Assembler::insts = {
     {"OUT", {2, vb({true})}}, 
     {"NOP", {3, vb({})}},
     {"KILL", {4, vb({})}}, 
-    {"NEG", {6, vb({true})}},
-    {"NOT", {7, vb({true})}}, 
-    {"CEIL", {8, vb({true})}}
+    {"NEG", {5, vb({true})}},
+    {"NOT", {6, vb({true})}}, 
+    {"CEIL", {7, vb({true})}},
+    {"SRET", {8, {true}}},
+    {"OUTS", {9, {false}}}
+};
+
+map<string, string> Assembler::aliases = {
+    {"SETR", "SETRU"},
+    {"SETL", "SETLU"}
 };
 
 map<string, uint16_t> buildRegConversions() {
@@ -76,6 +82,14 @@ void reverseBits(uint16_t& in) {
     in = ((in & 0b0101010101010101) << 1) || ((in >> (unsigned int)1) & 0b0101010101010101);
 }
 
+bool Assembler::isLabel(string x) {
+    return reservedLabels.count(x);
+}
+
+bool Assembler::isInstruction(string x) {
+    return aliases.count(x) | insts.count(x);
+}
+
 Assembler::Assembler(string filename, int instructionOffset, bool enableAssemblerCommands, bool littleEndian) : 
 file(filename), instructionOffset(instructionOffset), enableAssemblerCommands(enableAssemblerCommands) {
     if(!file.is_open()) {
@@ -86,7 +100,7 @@ file(filename), instructionOffset(instructionOffset), enableAssemblerCommands(en
     string line;
     int index = 0;
     while(getline(file, line)) {
-        if(!processLine(line, index++)) {
+        if(!processLine(line, ++index)) {
             cout << "at " << filename << ":" << index << " -> " << line << endl;
             return;
         }
@@ -100,7 +114,11 @@ file(filename), instructionOffset(instructionOffset), enableAssemblerCommands(en
     // Final Pass
     for(auto& [ml, rl] : lineReplacement) {
         int location = lineMappings[rl.first];
-        if(location >= (1<<rl.second)) {
+        if(location == -1) {
+            cout << "Error one line " << ml.first << " : invalid line reference" << endl;
+            return;
+        }
+        if(location >= (1<<(4*rl.second))) {
             cout << "Error on line " << ml.first << " : the resolution of #" << rl.first << " can not fit in this instruction" << endl;
             return;
         }
@@ -141,7 +159,7 @@ vector<string> splitString(string str) {
 }
 
 // no spaces allowed in constant
-bool processConstant(uint16_t& out, int& size, string constant) {
+bool Assembler::processConstant(uint16_t& out, int& size, string constant) {
     assert(constant.find(" ") == string::npos && constant.size());
     int convert;
 
@@ -149,7 +167,7 @@ bool processConstant(uint16_t& out, int& size, string constant) {
         convert = stoi(constant.substr(1), nullptr, 2);
     } else if((constant[0] == 'h' || constant[0] == 'H') && constant.size() > 1) {
         convert = stoi(constant.substr(1), nullptr, 16);
-    } else if(bfind(constant, "\\D") != constant.size()) {
+    } else if(bfind(constant, "[^0-9-]") != constant.size()) {
         cout << "Error: Invalid constant format: \'" << constant << "\'" << endl;
         return false;
     } else
@@ -177,33 +195,32 @@ bool processConstant(uint16_t& out, int& size, string constant) {
     return true;
 }
 
-bool isComment(string x) {return (x.size() > 1 && x[0] == '#' && x[1] != '#');}
 
 bool Assembler::processDirective(vector<string>& groups, int lineNumber) {
     bool invalidArguments = false;
     if(groups[0] == "#undef") {
-        if(!(invalidArguments = groups.size() != 2 && !(groups.size() > 2 && isComment(groups[2]))))
+        if(!(invalidArguments = groups.size() != 2 && !(groups.size() > 2)))
         labels.erase(groups[1]);
     } else if(groups[0] == "#data") {
             
-    } else if(groups[0] == "#define" && !(invalidArguments = (groups.size() == 1 || groups.size() > 3 && !isComment(groups[3])))) {
-        if(insts.count(groups[1]) < 0) {
-            cout << "Error: reserved name for label \"" << groups[1] << "\"" << endl;
+    } else if(groups[0] == "#define" && !(invalidArguments = (groups.size() == 1 || groups.size() > 3))) {
+        if(isInstruction(groups[1])) {
+            cout << "Error: name \"" << groups[1] << "\" is reserved" << endl;
             return false;
-        } else if(tolower(groups[1][0]) == 'h' || tolower(groups[1][0]) == 'b') {
+        } else if(reservedLabels.count(groups[1]) && !processedFunctionLabels.count(groups[1])) {
+            cout << "Error: can not override label \"" << groups[1] << "\" in the middle of declaration" << endl;
+            return false;
+        } else if(tolower(groups[1][0]) == 'h' || tolower(groups[1][0]) == 'b' || groups[1][0] == '#') {
             cout << "Error: label can not start with \'" << groups[1][0] << "\'" << endl;
             return false;
         }
-        if(groups.size() == 3 && !isComment(groups[2]))
+        if(groups.size() == 3)
             labels[groups[1]] = groups[2];
         else
             functionLabels.push_back({groups[1], {lineNumber, vector<uint16_t>()}});
-    } else {
-        cout << "Error: invalid directive" << endl;
-        return false;
-    }
-    if(groups[0] == "#endif") {
-        if(groups.size() > 1 && !isComment(groups[1])) {
+        reservedLabels.insert(groups[1]);
+    } else if(groups[0] == "#endif") {
+        if(groups.size() > 1) {
             cout << "Error: endif does not accept a second argument" << endl;
             return false;
         } else if(!functionLabels.size()) {
@@ -212,38 +229,42 @@ bool Assembler::processDirective(vector<string>& groups, int lineNumber) {
         }
         processedFunctionLabels[functionLabels[functionLabels.size() - 1].first] = functionLabels[functionLabels.size() - 1].second.second;
         functionLabels.pop_back();
+    } else {
+        cout << "Error: invalid directive" << endl;
+        return false;
     }
+    
     if(invalidArguments) {
         cout << "Error: directive \"" << groups[0] << "\" does not accept " << groups.size() << "argument" << (groups.size() == 2 ? "" : "s") << endl;
         return false;
-    } else if(groups[0].size() == 1 || groups[0][1] != '#') {
-        cout << "Error: invalid directive \"" << groups[0] << "\"" << endl;
-        return false;
     }
+
     return true;
 }
 
 bool Assembler::processLine(string line, int lineNumber) {
+    if(line.find("##") != string::npos)
+        line = line.substr(0, line.find("##"));
     line = trim(line);
+
+    lineMappings[lineNumber] = -1;
+
     if(!line.size()) return true;
     vector<string> groups = splitString(line);
 
-    if(line[0] == '#') {
-        lineMappings[lineNumber] = -1;
+    if(line[0] == '#')
         return processDirective(groups, lineNumber);
-    } else if(insts.count(groups[0])) {
-        vector<uint16_t> instructionList(1);
-        if(!processInstruction(instructionList[0], groups)) return false;
 
-        for(uint16_t instruction : instructionList) {
-            if(functionLabels.size())
-                functionLabels[functionLabels.size() - 1].second.second.push_back(instruction);
-            else {
-                lineMappings[lineNumber] = machineCode.size();
-                machineCode.push_back(instruction);
-            }
-        }
-    } else {
+    for(int i = 0; i < groups.size(); i++)
+        if(labels.count(groups[i]))
+            groups[i] = labels[groups[i]];
+
+    uint16_t mCode;
+    if(aliases.count(groups[0])) {
+        if(!processInstruction(groups, insts[aliases[groups[0]]], mCode, lineNumber)) return false;
+    }else if(insts.count(groups[0])) {
+        if(!processInstruction(groups, insts[groups[0]], mCode, lineNumber)) return false;
+    }else {
         int index = 0;
         do {
             if(!processedFunctionLabels.count(groups[index])) {
@@ -252,18 +273,35 @@ bool Assembler::processLine(string line, int lineNumber) {
             }
             lineMappings[lineNumber] = machineCode.size();
             machineCode.insert(machineCode.end(), processedFunctionLabels[groups[index]].begin(), processedFunctionLabels[groups[index]].end());
-        } while(groups.size() > index && !isComment(groups[index + 1]));
+        } while(groups.size() > index);
+        return true;
+    }
+
+    if(functionLabels.size())
+        functionLabels[functionLabels.size() - 1].second.second.push_back(mCode);
+    else {
+        lineMappings[lineNumber] = machineCode.size();
+        machineCode.push_back(mCode); 
     }
     return true;
 }
 
-bool Assembler::processInstruction(uint16_t& result, vector<string>& line) {
-    auto rules = insts[line[0]];
-    result = (rules.opCode << 4);
+bool Assembler::processInstruction(vector<string>& line, Instruction& rules, uint16_t& result, int lineNumber) {
+    
+    for(int i = 1; i < line.size(); i++) {
+        if(processedFunctionLabels.count(line[i])) {
+            cout << "Error: multline label can not exits in the middle of an instruction" << endl;
+            return false;
+        }
+    }
+
+    result = rules.opCode << 4;
 
     int size = 2 - (rules.opCode < 16) - (rules.opCode < 256);
     int inConstSize = size + 1 - rules.isRegisterGeneral.size();
     int expectedArgs = rules.isRegisterGeneral.size() + (bool)inConstSize;
+
+    if(inConstSize != 1) { // There are no 4bit constants - indicates no argument command
 
     if(line.size() - 1 != expectedArgs) {
         cout << "Error: wrong number of arguments for instruction " << line[0] << " (Expected " << expectedArgs << ")" << endl;
@@ -276,22 +314,34 @@ bool Assembler::processInstruction(uint16_t& result, vector<string>& line) {
             cout << "Error: unknown register \'" << line[index] << "\'" << endl;
             return false;
         }
-        result += registerConversions[line[index]] << (4 * size);
+        
+        result |= registerConversions[line[index]] << (4 * size);
     }
+
     if(index < line.size()) {
-        uint16_t constant;
-        int constant_size;
-        if(!processConstant(constant, constant_size, line[index])) return false;
-        if(constant_size > inConstSize) {
-            int maxv = (1<<(inConstSize*4 - 1)) - 1, minv = ~maxv;
-            if(line[0][line[0].size() - 1] == 'U') { // All commands(in above list) follow this convention
-                minv = 0;
-                maxv = maxv * 2 + 1;
+        if(line[index][0] == '#') {
+            if(line[index].size() == 1) {
+                cout << "Error: line number must follow #" << endl;
+                return false;
             }
-            cout << "Error: constant value is too large for command " << line[0] << " (range of [" << minv << ", " << maxv << "])" << endl;
-            return false;
+            int ln = stoi(line[index].substr(1));
+            lineReplacement.push_back({{lineNumber, machineCode.size()}, {ln, inConstSize}});
+        } else {
+            uint16_t constant;
+            int constant_size;
+            if(!processConstant(constant, constant_size, line[index])) return false;
+            if(constant_size > inConstSize) {
+                int maxv = (1<<(inConstSize*4 - 1)) - 1, minv = ~maxv;
+                if(line[0][line[0].size() - 1] == 'U') { // All machine instructions follow this convention
+                    minv = 0;
+                    maxv = maxv * 2 + 1;
+                }
+                cout << "Error: constant value is too large for command " << line[0] << " (range of [" << minv << ", " << maxv << "])" << endl;
+                return false;
+            }
+            result |= constant & (inConstSize == 1 ? 0b0000000000001111 : (inConstSize == 2 ? (0b0000000011111111) : (0b0000111111111111)));
         }
-        result += constant;
+    }
     }
     return true;
 }

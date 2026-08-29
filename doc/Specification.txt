@@ -5,6 +5,8 @@ General Information
 641536 x 16-bit memory
 
 For ease of use, a direct input-output system is built into the CPU itself
+Input is queued and fed into the IN register whenever the CPU reads from IN
+OUT is immediately written to a file
 
 Registers (25)
  - General purpose registers (0-15)
@@ -35,6 +37,7 @@ Cycle Stages:
     Set Input
     Fetch Instruction
     Execute Instruction (Increment PC if unset)
+    Set Output
 
 
 Instruction Formats
@@ -81,11 +84,11 @@ DIVU r1 r2 r3
 Sets HI to unsigned r2 / r3 and LOW to the remainder, then sets r1 to HI
 # Divide by 0 sets Arithmetic Error in Status
 
-SETL r1 value
+SETLU r1 value
 0110 _ _ _
 Sets first 8-bits of r1 to value
 
-SETR r1 value
+SETRU r1 value
 0111 _ _ _
 Sets last 8-bits of r1 to value
 
@@ -100,7 +103,8 @@ Sets r1 to the 0-extended 8-bit value
 JMPC value
 1010 _ _ _
 Sets PC to the signed sum of PC and value
-# First sets Return Register to PC + 1
+
+// Need more JMP Constant commands
 
 AND r1 r2 r3
 1011 _ _ _
@@ -119,15 +123,15 @@ ADDI r1 value
 Sets r1 to the signed sum of r1 and value
 # Sets carry bit in Status
 
-ADDIH r1 value
-1111 _ _ _
-Sets r1 to the signed sum of r1 and 8-bit left shifted value
+ADDIU r1 value
+1110 _ _ _
+Sets r1 to the unsigned sum of r1 and value
 # Sets carry bit in Status
 
 
-MOVS r1 r2
+MOVS r1 s2
 0000 0001 _ X_
-Copies the value of special register r2 into general register r1
+Copies the value of special register s2 into general register r1
 # First bit of sr is ignored
 
 MOV r1 r2
@@ -159,12 +163,10 @@ Sets PC to r1 if r2 is not zero else NOP
 JMPG r1 r2
 0000 1000 _ _
 Sets PC to r1 if r2 is greater than zero else NOP
-# First sets Return Register to PC + 1
 
 JMPGE r1 r2
 0000 1001 _ _
 Sets PC to r1 if r2 is greater than or equal to zero else NOP
-# First sets Return Register to PC + 1
 
 SFTLC r1 value
 0000 1010 _ _
@@ -205,7 +207,7 @@ Sets PC to r1
 
 OUT r1
 0000 0000 0010 _
-Sets OUT to the value of r1
+Sets OUT to the value of general register r1
 
 NOP
 0000 0000 0011 _
@@ -226,3 +228,14 @@ Sets r1 to its one-complement
 CEIL r1
 0000 0000 0111 _
 Sets r1 to 0 if r1 < 0
+
+//*
+SRET value
+0000 0000 1000 _
+Sets RETURN to PC + value
+# value is signed
+*//
+
+OUTS s1
+0000 0000 1001 _
+Sets OUT to the value of special register s1

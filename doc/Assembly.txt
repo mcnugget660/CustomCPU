@@ -26,20 +26,23 @@ Directives
 Replaces all occurances (seen as a whole word) of Label with X before interpreting
 Labels are applied to all lines below definition
 redefining a Label is acceptable
-No Label may start with : b, B, h, H
+No Label may start with : b, B, h, H, #
 No spaces
 
 #define Label
 x1
 x2
 #endif
-Defines a multiline Label
+Defines a multiline Label (a grouping of machine instructions)
 only copies the lines in between #define and #endif
 contained directives are not copied but are processed normally
 No second argument -> will error
 **Implicitly the label includes a newline character at the end, meaning a statement
-with space seperated labels would compile. HOWEVER, labels added in this fashion after
+with space seperated labels would compile. HOWEVER, multiline-labels added in this fashion after
 a regular instruction or directive will cause an error.
+
+***Internal labels are evaluated at definition. Changing a label will not change the multiline-lable's
+machine code
 
 #undef Label
 Removes the Label directive
@@ -63,7 +66,7 @@ srx x [0, 7]
 SRx x [0, 7]
 
 #x
-Replaced with the machine code address of the xth assembly line (this includes directives)
+Replaced with the machine code address of the xth assembly line (this includes directives and empty lines)
 
 #ENDP
 The address AFTER the final machine code Instruction
@@ -83,7 +86,16 @@ Command Conventions
 gr0 -> memory address
 gr1 -> store/load from memory + temp (ignore completly unless very careful)
 
+Aliases
+
+SETR -> SETRU
+SETL -> SETLU
+
 Additional Commands
+
+
+NOT IMPLEMENTED
+At this point just add functions/labels with inputs
 
 SETM addr hw
 Sets memory at addr to the full halfword

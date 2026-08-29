@@ -25,10 +25,9 @@ public:
     uint16_t sr[8] = {};
     uint16_t instruction = 0;
 
-    static std::array<std::string, 39> instruction_codes;
+    static std::array<std::string, 41> instruction_codes;
 
     std::array<uint16_t, 641536>* memory;
-    std::string name = "amongus";
 
 private:
     // Invisible values
@@ -38,7 +37,7 @@ private:
     // Handlers
     static std::array<void (Processor::*)(), 16> instruction_table1;
     static std::array<void (Processor::*)(), 16> instruction_table2;
-    static std::array<void (Processor::*)(), 8> instruction_table3;
+    static std::array<void (Processor::*)(), 10> instruction_table3;
 
     void ROUTE1();
     void ADD();
@@ -54,8 +53,8 @@ private:
     void AND();
     void OR();
     void XOR();
-    void ADDC();
-    void ADDCH();
+    void ADDI();
+    void ADDIU();
 
 
     void ROUTE2();
@@ -83,6 +82,8 @@ private:
     void NEG();
     void NOT();
     void CEIL();
+    void SRET();
+    void OUTS();
 };
 
 #endif // PROCESSOR_H_

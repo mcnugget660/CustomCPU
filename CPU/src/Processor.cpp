@@ -2,17 +2,17 @@
 
 #include <iostream>
 
-std::array<std::string, 39> Processor::instruction_codes = {
+std::array<std::string, 41> Processor::instruction_codes = {
     "NULL", "ADD", "MUL", "MULU", "DIV", "DIVU", "SETL", "SETR", "SET", "SETU",
-    "JMPC", "AND", "OR", "XOR", "ADDC", "ADDCH", "MOVS", "MOV", "STAT", "LOAD",
+    "JMPC", "AND", "OR", "XOR", "ADDI", "ADDIU", "MOVS", "MOV", "STAT", "LOAD",
     "STORE", "JMPE", "JMPNE", "JMPG", "JMPGE", "SFTLC", "SFTRC", "SFTRAC", "SFTL",
-    "SFTR", "SFTRA", "RET", "JMP", "OUT", "NOP", "KILL", "NEG", "NOT", "CEIL"
+    "SFTR", "SFTRA", "RET", "JMP", "OUT", "NOP", "KILL", "NEG", "NOT", "CEIL", "SRET", "OUTS"
 };
 
 std::array<void (Processor::*)(), 16> Processor::instruction_table1 = {
     &Processor::ROUTE1, &Processor::ADD, &Processor::MUL, &Processor::MULU, &Processor::DIV,
     &Processor::DIVU, &Processor::SETL, &Processor::SETR, &Processor::SET, &Processor::SETU,
-    &Processor::JMPC, &Processor::AND, &Processor::OR, &Processor::XOR, &Processor::ADDC, &Processor::ADDCH
+    &Processor::JMPC, &Processor::AND, &Processor::OR, &Processor::XOR, &Processor::ADDI, &Processor::ADDIU
 };
     
 std::array<void (Processor::*)(), 16> Processor::instruction_table2 = {
@@ -21,9 +21,9 @@ std::array<void (Processor::*)(), 16> Processor::instruction_table2 = {
     &Processor::SFTLC, &Processor::SFTRC, &Processor::SFTRAC,&Processor::SFTL, &Processor::SFTR, &Processor::SFTRA
 };
     
-std::array<void (Processor::*)(), 8> Processor::instruction_table3 = {
-    &Processor::RET, &Processor::JMP, &Processor::OUT, &Processor::NOP, 
-    &Processor::KILL, &Processor::NEG, &Processor::NOT, &Processor::CEIL
+std::array<void (Processor::*)(), 10> Processor::instruction_table3 = {
+    &Processor::RET, &Processor::JMP, &Processor::OUT, &Processor::NOP, &Processor::KILL, 
+    &Processor::NEG, &Processor::NOT, &Processor::CEIL, &Processor::SRET, &Processor::OUTS
 };
 
 // Some status bits can only be set to 1
@@ -73,14 +73,14 @@ void Processor::DIV(){
 void Processor::DIVU(){if(!gr[r3]) setStatus(1); else {HI = ugr(r2) / ugr(r3); LOW = ugr(r2) % ugr(r3); gr[r1] = HI;}}
 void Processor::SETL(){gr[r1] = (ugr(r1)&0b0000000011111111) | (instruction<<8);}
 void Processor::SETR(){gr[r1] = ((gr[r1]>>8)<<8) | co2;}
-void Processor::SET(){gr[r1] = (int8_t) co2;}
+void Processor::SET(){gr[r1] = static_cast<int8_t>(instruction&0xFF);}
 void Processor::SETU(){gr[r1] = co2;}
 void Processor::JMPC(){nxt_PC = (int32_t) PC + co3;}
 void Processor::AND(){gr[r1] = gr[r2] & gr[r3];}
 void Processor::OR(){gr[r1] = gr[r2] | gr[r3];}
 void Processor::XOR(){gr[r1] = gr[r2] ^ gr[r3];}
-void Processor::ADDC(){uint32_t temp = gr[r1] + co2;setStatusTo(0,temp & (1 << 16));gr[1] = temp;}
-void Processor::ADDCH(){uint32_t temp = gr[r1] + co2;setStatusTo(0,temp & (1 << 16));gr[1] = temp;}
+void Processor::ADDI(){uint32_t temp = gr[r1] + (int8_t) co2;setStatusTo(0,temp & (1 << 16));gr[1] = temp;}
+void Processor::ADDIU(){uint32_t temp = gr[r1] + co2;setStatusTo(0,temp & (1 << 16));gr[1] = temp;}
 
 #undef r1
 #undef r2
@@ -93,10 +93,10 @@ void Processor::MOV(){gr[r1] = gr[r2];}
 void Processor::STAT(){gr[r1] = (STATUS) & (1 << r2);}
 void Processor::LOAD(){gr[r1] = (*memory)[ugr(r2)];}
 void Processor::STORE(){(*memory)[ugr(r2)] = gr[r1];}
-void Processor::JMPE(){RETURN = PC + 1; nxt_PC = gr[r2] ? nxt_PC : ugr(r1);}
-void Processor::JMPNE(){RETURN = PC + 1; nxt_PC = gr[r2] ? ugr(r1) : nxt_PC;}
-void Processor::JMPG(){RETURN = PC + 1; nxt_PC = gr[r2] > 0 ? ugr(r1) : nxt_PC;}
-void Processor::JMPGE(){RETURN = PC + 1; nxt_PC = gr[r2] >= 0 ? ugr(r1) : nxt_PC;}
+void Processor::JMPE(){nxt_PC = gr[r2] ? nxt_PC : ugr(r1);}
+void Processor::JMPNE(){nxt_PC = gr[r2] ? ugr(r1) : nxt_PC;}
+void Processor::JMPG(){nxt_PC = gr[r2] > 0 ? ugr(r1) : nxt_PC;}
+void Processor::JMPGE(){nxt_PC = gr[r2] >= 0 ? ugr(r1) : nxt_PC;}
 void Processor::SFTLC(){gr[r1] <<= r2;}
 void Processor::SFTRC(){gr[r1] = ugr(r1) >> r2;}
 void Processor::SFTRAC(){gr[r1] >>= r2;}
@@ -108,13 +108,15 @@ void Processor::SFTRA(){if(ugr(r2) < 16) gr[r1] >>= gr[r2]; else setStatus(1);}
 #define r1 (instruction&0b0000000000001111)
 
 void Processor::RET(){nxt_PC = RETURN;}
-void Processor::JMP(){RETURN = PC + 1; nxt_PC = ugr(r1);}
-void Processor::OUT(){OUT_R = gr[r1];setStatus(3);}
+void Processor::JMP(){nxt_PC = ugr(r1);}
+void Processor::OUT(){OUT_R = gr[r1]; setStatus(3);}
 void Processor::NOP(){}
 void Processor::KILL(){setStatus(5);}
 void Processor::NEG(){gr[r1] = -gr[r1];}
 void Processor::NOT(){gr[r1] = ~gr[r1];}
 void Processor::CEIL(){gr[r1] = gr[r1] < 0 ? 0 : gr[r1];}
+void Processor::SRET(){RETURN = PC + gr[r1];};
+void Processor::OUTS(){OUT_R = sr[r1&7]; setStatus(3);}
 
 
 void Processor::fetch() {
