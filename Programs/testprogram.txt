@@ -1,0 +1,15 @@
+## Calculate n! and output result
+
+#define n 6
+
+SET r1 1
+SET r2 n
+SET r4 -1
+SET r3 #14
+SET r0 #10
+JMPE r3 r2
+MULU r1 r1 r2
+ADD r2 r2 r4
+JMP r0
+OUT r1
+KILL
