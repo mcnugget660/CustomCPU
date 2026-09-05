@@ -11,7 +11,7 @@ string format_reg(uint16_t value) {
 }
 
 string inst_code(uint16_t inst) {
-    return Processor::instruction_codes[(inst>>12) ? (inst>>12) : ((inst<<4)>>12) ? ((inst<<4)>>12) + 16 : 31 + ((inst<<8)>>12)];
+    return Processor::instruction_codes[(inst>>12) ? (inst>>12) : (inst>>8) ? (inst>>8) + 15 : 31 + (inst>>4)];
 }
 
 string convertBinaryString(string s) {
@@ -38,7 +38,7 @@ void Menu::convertInputString() {
     inputString = binaryInputMode ? convertNonBinaryString(inputString) : convertBinaryString(inputString);
 }
 
-Menu::Menu(deque<char>* queue, Processor* processor, bool step_through) : screen(App::TerminalOutput()), menu(getMenu(processor)), loop(&screen, menu), in_queue(queue), step_through(step_through){
+Menu::Menu(deque<char>* queue, Processor* processor, bool step_through) : screen(App::TerminalOutput()), menu(getMenu(processor)), loop(&screen, menu), in_queue(queue), step_through(step_through), processor(processor) {
     lastCycleEval = lastMenuUpdate = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now().time_since_epoch());
     cyclesPerSecond = -1;
 }
@@ -48,6 +48,7 @@ bool Menu::hasQuit() {
 }
 
 void Menu::draw() {
+    step_through |= processor->shouldDebug();
     halt = step_through;
     do {
         auto now = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now().time_since_epoch());
@@ -71,7 +72,7 @@ string regStr(uint16_t number) {
     return format_reg(number)+" ("+temp;
 }
 
-Component Menu::getMenu(Processor* processor) {
+Component Menu::getMenu(Processor* proc) {
     InputOption inputDetails = InputOption::Default();
 
     inputDetails.on_enter = [this] {
@@ -87,23 +88,18 @@ Component Menu::getMenu(Processor* processor) {
     });
 
     advanceButton = Button("Advance",[this] {halt = false;},ButtonOption::Ascii());
-    Component buttons = Container::Horizontal({
+    buttons = Container::Horizontal({
         Button("Kill",[this] {quit = true;},ButtonOption::Ascii()),
         Button("Toggle Input",[this] {binaryInputMode = !binaryInputMode;convertInputString();},ButtonOption::Ascii()),
-        Button("Reset PC",[=] {processor->sr[0] = 0;},ButtonOption::Ascii()),
+        Button("Reset PC",[=] {proc->sr[0] = 0;},ButtonOption::Ascii()),
     });
     
-    Component haltingButton =  Button("Toggle Halt",[buttons, this] {
+    Component haltingButton =  Button("Toggle Halt",[this] {
             step_through = !step_through;
             halt = false;
-            if(step_through)
-                buttons->Add(advanceButton);
-            else
-                advanceButton->Detach();
     },ButtonOption::Ascii());
     
     buttons->Add(haltingButton);
-    if(step_through) buttons->Add(advanceButton);
     
     allOut = Container::Vertical({
         buttons,
@@ -112,30 +108,40 @@ Component Menu::getMenu(Processor* processor) {
 
 
     // Display would otherwise be selected by default for keyboard navigation
-    Component STMode = Renderer(allOut, [this, processor] {
+    Component STMode = Renderer(allOut, [this, proc] {
+        string prevInst = inst_code(proc->instruction);
+        if(step_through)
+            buttons->Add(advanceButton);
+        else
+            advanceButton->Detach();
         return vbox({
             text(". . . . . . . . . . . . . . . . . . . . CustomCPU . . . . . . . . . . . . . . . . . . . ."),
-            text("| Registers                                             INFO"),
-            text("| G0 "+regStr(processor->gr[0])+"    G08 "+regStr(processor->gr[8])+"     Cycles/Second : "+(step_through?"-":to_string(cyclesPerSecond))),
-            text("| G1 "+regStr(processor->gr[1])+"    G09 "+regStr(processor->gr[9])+"     InputQueue : "+to_string(in_queue->size() / 4)),
-            text("| G2 "+regStr(processor->gr[2])+"    G10 "+regStr(processor->gr[10])+"     ERROR : YES"),
-            text("| G3 "+regStr(processor->gr[3])+"    G11 "+regStr(processor->gr[11])+"     HALT : "+(step_through?"YES":"NO")),
-            text("| G4 "+regStr(processor->gr[4])+"    G12 "+regStr(processor->gr[12])+"     Input : "+(binaryInputMode?"Binary":"Ascii")),
-            text("| G5 "+regStr(processor->gr[5])+"    G13 "+regStr(processor->gr[13])),
-            text("| G6 "+regStr(processor->gr[6])+"    G14 "+regStr(processor->gr[14])),
-            text("| G7 "+regStr(processor->gr[7])+"    G15 "+regStr(processor->gr[15])),
+            text("| Registers                                                               INFO"),
+            text("| G0 "+regStr(proc->gr[0])+"    G08 "+regStr(proc->gr[8])+"     Cycles/Second : "+(step_through?"-":to_string(cyclesPerSecond))),
+            text("| G1 "+regStr(proc->gr[1])+"    G09 "+regStr(proc->gr[9])+"     InputQueue : "+to_string(in_queue->size() / 4)),
+            text("| G2 "+regStr(proc->gr[2])+"    G10 "+regStr(proc->gr[10])+"     ERROR : YES"),
+            text("| G3 "+regStr(proc->gr[3])+"    G11 "+regStr(proc->gr[11])+"     HALT : "+(step_through?"YES":"NO")),
+            text("| G4 "+regStr(proc->gr[4])+"    G12 "+regStr(proc->gr[12])+"     Input : "+(binaryInputMode?"Binary":"Ascii")),
+            text("| G5 "+regStr(proc->gr[5])+"    G13 "+regStr(proc->gr[13])),
+            text("| G6 "+regStr(proc->gr[6])+"    G14 "+regStr(proc->gr[14])),
+            text("| G7 "+regStr(proc->gr[7])+"    G15 "+regStr(proc->gr[15])),
             text("|"),
-            text("| PC  "+regStr(processor->sr[0])+"  CLOCK  "+regStr(processor->sr[4])),
-            text("| RET "+regStr(processor->sr[1])+"  STATUS "+regStr(processor->sr[5])),
-            text("| HI  "+regStr(processor->sr[2])+"  IN     "+regStr(processor->sr[6])),
-            text("| LOW "+regStr(processor->sr[3])+"  OUT    "+regStr(processor->sr[7])),
+            text("| PC  "+regStr(proc->sr[0])+"  CLOCK  "+regStr(proc->sr[4])),
+            text("| RET "+regStr(proc->sr[1])+"  STATUS "+regStr(proc->sr[5])),
+            text("| HI  "+regStr(proc->sr[2])+"  IN     "+regStr(proc->sr[6])),
+            text("| LOW "+regStr(proc->sr[3])+"  OUT    "+regStr(proc->sr[7])),
             text("|"),
-            text("| Prev Instruction :"+format_reg(processor->instruction) + " (" + inst_code(processor->instruction) + ")"),
-            text("| Next Instruction :"+format_reg(processor->memory->at(processor->sr[0])) + " (" + inst_code(processor->memory->at(processor->sr[0])) + ")"),
+            hbox({text("| Prev Instruction :"+format_reg(proc->instruction) + " ("), 
+                text(prevInst) | color((prevInst.find("JMP") != string::npos) ? ((proc->sr[5] & (1<<6)) ? Color::Green : Color::Red) : Color::White), 
+                text(")")}),
+            text("| Next Instruction :"+format_reg(proc->memoryAt(proc->sr[0])) + " (" + inst_code(proc->memoryAt(proc->sr[0])) + ")"),
             text("------------------------------------------------------------------------------------------"),
             allOut->Render()
         });
     });
+
+
+    // Memory Display barely encloses latest memory addr change if it is not already visible
 
     return STMode;
 }

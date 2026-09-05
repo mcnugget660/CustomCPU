@@ -28,7 +28,5 @@ int main(int argc, char* argv[]) {
             instSet = true;
     }
 
-    Assembler(argv[1], offset, instSet).print(regex_replace(argv[1], regex("\\..*"),"") + ".asm"); // vexing
-
-    return 0;
+    return !Assembler(argv[1]).print(regex_replace(argv[1], regex("\\..*"),"") + ".asm", offset, instSet); // vexing
 }

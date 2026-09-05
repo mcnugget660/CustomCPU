@@ -18,6 +18,7 @@ private:
     // Not part of menu heirarcy so must remain in scope
     ftxui::Component allOut = nullptr; // ORDER DEPENDENT
     ftxui::Component advanceButton = nullptr; // ORDER DEPENDENT
+    ftxui::Component buttons = nullptr;
 
     ftxui::App screen; // ORDER DEPENDENT
     ftxui::Component menu; // ORDER DEPENDENT
@@ -39,6 +40,7 @@ private:
     bool halt = false;
     bool quit = false;
 
+    Processor* processor;
 
     void convertInputString();
     ftxui::Component getMenu(Processor* processor);

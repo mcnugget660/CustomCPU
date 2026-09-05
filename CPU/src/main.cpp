@@ -14,18 +14,19 @@
 
 using namespace std;
 
-int configureProgram(int argc, char* argv[], deque<char>& in_queue, bool& step_through, array<uint16_t, 641536>& memory);
+int configureProgram(int argc, char* argv[], deque<char>& in_queue, bool& step_through, array<char, 641536>& memory);
 
 int main(int argc, char* argv[]) {
     deque<char> in_queue;
     bool step_mode = false;
-    static std::array<uint16_t, 641536> memory; // Don't store on stack
+    static std::array<char, 641536> memory; // Don't store on stack
     if(configureProgram(argc, argv, in_queue, step_mode, memory)) return 1;
 
     Processor processor(&memory);
     Menu menu(&in_queue, &processor, step_mode);
 
     uint16_t OUT_VALUE;
+    bool OUT_TYPE;
     ofstream output("output.txt", ios_base::binary);
     output.is_open();
 
@@ -42,10 +43,12 @@ int main(int argc, char* argv[]) {
         processor.fetch();
         processor.execute();
 
-        if(processor.getOut(&OUT_VALUE))
-            output.write((char*)&OUT_VALUE, 2);
+        if(processor.getOut(OUT_VALUE, OUT_TYPE))
+            output.write((char*)&OUT_VALUE, OUT_TYPE ? 1 : 2);
 
         if(processor.shouldKill()) break;
+    
+        output << memory[8];
     }
 
     output.flush();
@@ -55,7 +58,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-int configureProgram(int argc, char* argv[], deque<char>& in_queue, bool& step_through, array<uint16_t, 641536>& memory) {
+int configureProgram(int argc, char* argv[], deque<char>& in_queue, bool& step_through, array<char, 641536>& memory) {
     string ans = "no", fileName, memName;
     bool setFileEnable = false, fileSet = false, stepSet = false, memSet = false, modeSet = false;
     bool binaryMode;
@@ -137,7 +140,7 @@ int configureProgram(int argc, char* argv[], deque<char>& in_queue, bool& step_t
     if(binaryMode) { 
         size_t numBytes = filesystem::file_size(memName);
         long long index = 0;
-        while(index / 2 < memory.size() && index < numBytes) {
+        while(index < memory.size() && index < numBytes) {
             memory_file.read(((char*) memory.data()) + index, 1);
             index++;
         }

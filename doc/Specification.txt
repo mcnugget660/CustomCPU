@@ -11,7 +11,7 @@ OUT is immediately written to a file
 Registers (25)
  - General purpose registers (0-15)
  - PC register (S0)
- - Return register (S1)
+ - ADDRESS (S1)
  - HI (S2)
  - LOW (S3)
  - CLOCK (S4)
@@ -20,15 +20,15 @@ Registers (25)
  - OUT (S7)
  - Instruction
 
-STATUS
+STATUS (Least to most significant)
 0 - Carry Bit
 1 - Arithmetic Exception
 2 - IN Waiting
 3 - OUT Waiting
-4 - 
+4 - OUT TYPE (1 is byte, 0 is halfword)
 5 - KILL
-7
-8
+6 - COMPARE
+7 - BreakPoint
 8-15 - ???
 
 All registers are set to 0 on start
@@ -42,21 +42,33 @@ Cycle Stages:
 
 Instruction Formats
 
-#1 AAAA BBBB CCCC DDDD
+#1 AAAA BBBB BBBB BBBB
 A - Opcode
-B - r1 or constant
-C - r2 or constant
-D - r3 or constant
+B - constant
 
-#2 AAAA AAAA BBBB CCCC
+#2 AAAA BBBB CCCC CCCC
 A - Opcode
-B - r1 or constant
-C - r2 or constant
+B - r1
+C - constant
 
-#3 AAAA AAAA AAAA BBBB
+#3 AAAA BBBB CCCC DDDD
 A - Opcode
-B - r1 or constant
-C - r2 or constant
+B - r1
+C - r2
+D - r3
+
+#4 AAAA AAAA BBBB CCCC
+A - Opcode
+B - r1
+C - r2
+
+#5 AAAA AAAA BBBB BBBB
+A - Opcode
+B - constant
+
+#6 AAAA AAAA AAAA BBBB
+A - Opcode
+B - r1 or null
 
 Instructions
 
@@ -84,11 +96,11 @@ DIVU r1 r2 r3
 Sets HI to unsigned r2 / r3 and LOW to the remainder, then sets r1 to HI
 # Divide by 0 sets Arithmetic Error in Status
 
-SETLU r1 value
+SETL r1 value
 0110 _ _ _
 Sets first 8-bits of r1 to value
 
-SETRU r1 value
+SETR r1 value
 0111 _ _ _
 Sets last 8-bits of r1 to value
 
@@ -100,11 +112,9 @@ SETU r1 value
 1001 _ _ _
 Sets r1 to the 0-extended 8-bit value
 
-JMPC value
+JMPR value
 1010 _ _ _
-Sets PC to the signed sum of PC and value
-
-// Need more JMP Constant commands
+Sets PC to the signed sum of PC and value if COMPARE is one
 
 AND r1 r2 r3
 1011 _ _ _
@@ -123,11 +133,9 @@ ADDI r1 value
 Sets r1 to the signed sum of r1 and value
 # Sets carry bit in Status
 
-ADDIU r1 value
+JMPB value
 1110 _ _ _
-Sets r1 to the unsigned sum of r1 and value
-# Sets carry bit in Status
-
+Sets PC to value left-shifted by four if COMPARE is one
 
 MOVS r1 s2
 0000 0001 _ X_
@@ -144,41 +152,39 @@ Sets r1 to 1 if the specified status bit is set, otherwise r1 is set to 0
 
 LOAD r1 r2
 0000 0100 _ _
-Loads the value from memory at the address of r2 and stores it in r1
+Stores the value from memory at r2 in r1 (halfword aligned)
 
 STORE r1 r2
 0000 0101 _ _
-Stores the value of r1 to the memory address at r2
+Stores the value from memory at r2 in r1 (halfword aligned)
 
-JMPE r1 r2
+LOADB r1 r2
 0000 0110 _ _
-Sets PC to r1 if r2 is zero else NOP
-# First sets Return Register to PC + 1
+Stores the least significant byte from memory at r2 into r1 (sign extended)
 
-JMPNE r1 r2
+LOADBU r1 r2
 0000 0111 _ _
-Sets PC to r1 if r2 is not zero else NOP
-# First sets Return Register to PC + 1
+Stores the least significant byte from memory at r2 into r1 (0 extended)
 
-JMPG r1 r2
+CMPG r1 r2
 0000 1000 _ _
-Sets PC to r1 if r2 is greater than zero else NOP
+COMPARE is set to is r1 > r2
 
-JMPGE r1 r2
+CMPGE r1 r2
 0000 1001 _ _
-Sets PC to r1 if r2 is greater than or equal to zero else NOP
+COMPARE is set to is r1 >= r2
 
-SFTLC r1 value
+CMPL r1 r2
 0000 1010 _ _
-Shifts r1 value bits to the left (fill 0)
+COMPARE is set to is r1 < r2
 
-SFTRC r1 value
+CMPLE r1 r2
 0000 1011 _ _
-Shifts r1 value bits to the right (fill0)
+COMPARE is set to is r1 <= r2
 
-SFTRAC r1 value
+STOREB r1 r2
 0000 1100 _ _
-Shifts r1 value bits to the right (fill sign bit)
+Stores the least significant byte of r1 into the memory address at r2
 
 SFTL r1 r2
 0000 1101 _ _
@@ -195,19 +201,18 @@ SFTRA r1 r2
 Shifts r1 r2 bits to the right (fill sign bit)
 # Sets Arithmetic Exception bit in Status if r2 is not within [0, 15]
 
-
-RET
+SADDR r1
 0000 0000 0000 _
-Sets PC to Return Register
+Sets ADDRESS to r1
 
 JMP r1
 0000 0000 0001 _
-Sets PC to r1
-# First sets Return Register to PC + 1
+Sets PC to r1 if COMPARE is one
 
 OUT r1
 0000 0000 0010 _
 Sets OUT to the value of general register r1
+Sets OutType to 0
 
 NOP
 0000 0000 0011 _
@@ -225,17 +230,28 @@ NOT r1
 0000 0000 0110 _
 Sets r1 to its one-complement
 
-CEIL r1
+CMPE r1
 0000 0000 0111 _
-Sets r1 to 0 if r1 < 0
+Sets COMPARE to r1 == 0
 
-//*
-SRET value
+CMPNE r1
 0000 0000 1000 _
-Sets RETURN to PC + value
-# value is signed
-*//
+Sets COMPARE to r1 != 0
 
 OUTS s1
 0000 0000 1001 _
 Sets OUT to the value of special register s1
+Sets OutType to 0
+
+J r1
+0000 0000 1010 _
+Sets PC to r1
+
+OUTC r1
+0000 0000 1011 _
+Sets OUT to the low byte of r1
+Sets OutType to 1
+
+DEBUG
+0000 0000 1100 _ 
+Sets BREAKPOINT to 1 and enables StepThrough mode
