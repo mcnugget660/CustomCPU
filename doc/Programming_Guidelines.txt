@@ -1,0 +1,22 @@
+Some Guidelines I will use for the programs in /Programs
+
+Scopes will name registers that are used
+Any register with an unspecified output can be assumed to be the same unless it is marked with T
+
+Register Conventions
+0 - zero value, don't set
+1 - memory address
+2 - data
+3 - temp
+4 - temp
+5 - temp
+6 - temp
+7 -
+8 -
+9 -
+10 -
+11 -
+12 -
+13 -
+14 -
+15 -

@@ -1,0 +1,160 @@
+#define FACTORIAL
+    ## Calculate n! and output result
+    #define n 6
+
+    SET r1 1
+    SET r2 n
+    SET r4 -1
+    SET r0 $LOOP
+    LOOP:
+        CMPE r2
+        JMPR $FIN
+        MULU r1 r1 r2
+        ADD r2 r2 r4
+        J r0
+    FIN:
+#endif
+
+#define STACK_UTIL
+    #define SP gr0
+    #define createStack
+        SET SP #ENDP
+    #endif
+    #define popStackGR1
+        ADDI SP -1
+        LOAD gr1 SP
+    #endif
+    #define pushStackGR1
+        STORE gr1 SP
+        ADDI SP 1
+    #endif
+#endif
+
+## no side effects - r0 must be 0
+#define STRING
+    #define ASCII_MINUS 45
+    #define ASCII_SPACE 32
+
+    ## Outputs a string starting at memory addr r1
+    #define PRINT_STRING_R1_TR3_TR4_TR5
+        STORE r3 r1
+        MOV r4 r1
+        LOOP:
+            CMPGE r4 r3
+            JMPR $ENDLOOP
+            LOADBU r5 r4
+            OUTC r5
+            ADDI r4 1
+            ENDLOOP:
+            CMPL r4 r3
+            JMPR $LOOP
+    #endif
+
+    ## creates string at r1 and sets r2 to end ptr
+    #define CREATE_STRING_R1_R2
+        MOV r2 r1
+        ADDI r2 2
+        LOAD r2 r1
+    #endif
+
+    ## adds character r3 to end of string
+    #define interal_CONCAT_R3_TO_R1_R2_STRING
+        STOREB r2 r3
+        ADDI r2 1
+        STORE r2 r1
+    #endif
+
+    ## adds character r3 to end of string and doesn't update
+    #define interal_CONCAT_R3_TO_R1_R2_STRING_TRAILING
+        STOREB r2 r3
+        ADDI r2 1
+    #endif
+
+    ## Concats str r2 onto the end of str r1
+    #define CONCAT_STRING_R1_R2_TR3_TR4_TR5
+        MOV r3 r1
+        MOV r4 r2
+        LOAD r1 r1
+        LOAD r2 r2
+        NEG r2
+        ADD r2 r4 r2
+        NEG r2
+        ADD r1 r2 r0
+        ADDI r1 -1
+        LOAD r2 r4
+        LOOP:
+            ADDI r1 -1
+            ADDI r2 -1
+            CMPLE r2 r4
+            JMPR $LOOPCHECK
+            LOAD r5 r2
+            STORE r5 r1
+        LOOPCHECK:
+            CMPG r2 r4
+            JMPR $LOOP
+    #endif
+
+    ## length of string at r1 store in r2
+    #define STRING_LEN_R1_R2
+        LOAD r2 r1
+        NEG r2
+        ADD r2 r1 r2
+        NEG r2
+    #endif
+
+    ## laods the pointer to the end of the string
+    #define STRING_R1_EPTR_R2
+        LOAD r2 r1
+    #endif
+
+    ## reverses string
+    #define REVERSE_STRING_R1_TR3_TR4_TR5_TR6
+        LOAD r3 r1
+        MOV r4 r1
+        LOOP:
+            ADDI r3 -1
+            ADDI r4 1
+            CMPLE r4 r3
+            JMPR $FINAL
+            LOAD r5 r3
+            LOAD r6 r4
+            STORE r3 r6
+            STORE r4 r5
+            CMPLE r0 r0
+            JMPR $LOOP
+        FINAL:
+    #endif
+
+    ## converts number to base 10 string
+    #define R2_TO_STRING_R1_TR3_TR4_TR5_TR6
+        DEBUG
+        MOV r5 r2
+        MOV r4 r5
+        SET r6 10
+        CREATE_STRING_R1_R2()
+        CMPL r4 r0
+        JMPR $LOOP
+        SET r3 ASCII_MINUS
+        interal_CONCAT_R3_TO_R1_R2_STRING_TRAILING()
+        LOOP:
+            DIV r4 r4 r6
+            MOVS r3 LOW
+            interal_CONCAT_R3_TO_R1_R2_STRING_TRAILING()
+            CMPNE r4
+            JMPR $LOOP
+        FINAL:
+        STORE r2 r1
+        MOV r2 r5
+    #endif
+#endif
+
+#using STRING
+
+FACTORIAL()
+
+MOV r2 r1
+SETL r1 4
+R2_TO_STRING_R1_TR3_TR4_TR5_TR6()
+PRINT_STRING_R1_TR3_TR4_TR5()
+
+KILL
