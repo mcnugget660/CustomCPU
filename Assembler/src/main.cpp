@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
 
     unsigned int offset = 0;
     bool instSet = false;
+    bool little = false;
 
     for(int i = 2; i < argc; i++) {
         if(argv[i] == "-o") {
@@ -24,9 +25,13 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             offset = stoi(argv[++i]);
-        } else if(argv[i] == "-s")
-            instSet = true;
+        } else if(argv[i] == "--littleEndian")
+            little = instSet = true;
+        else if(argv[i] == "--bigEndian") 
+            little = !(instSet = true);
     }
 
-    return !Assembler(argv[1]).print(regex_replace(argv[1], regex("\\..*"),"") + ".asm", offset, instSet); // vexing
+    if(instSet)
+    return !Assembler(argv[1]).print(regex_replace(argv[1], regex("\\..*"),"") + ".asm", offset, little); // vexing
+    return !Assembler(argv[1]).print(regex_replace(argv[1], regex("\\..*"),"") + ".asm", offset); // vexing
 }
